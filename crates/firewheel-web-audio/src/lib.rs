@@ -51,6 +51,8 @@ mod dynamic_module;
 mod error;
 mod wasm_processor;
 
-pub use backend::{WebAudioBackend, WebAudioConfig, WebAudioStartError, WebAudioStreamError};
+pub use backend::{
+    OutputTimestamp, WebAudioBackend, WebAudioConfig, WebAudioStartError, WebAudioStreamError,
+};
 
 const BLOCK_FRAMES: usize = 128;

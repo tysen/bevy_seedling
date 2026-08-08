@@ -83,6 +83,34 @@ impl AudioContext {
         self.with(|c| c.audio_clock_corrected())
     }
 
+    /// The total audio output latency in seconds, if the platform reports one:
+    /// how long a sample written now takes to reach the ear, including
+    /// processing-graph, device, and any intermediate buffering.
+    ///
+    /// On the web this is derived from `AudioContext.getOutputTimestamp` (all
+    /// major browsers), so it tracks output device changes at runtime — a
+    /// Bluetooth headset connecting mid-session shows up here. Use it to lead
+    /// gameplay-triggered sounds so their transients land in sync with the
+    /// presented frame.
+    ///
+    /// Returns `None` on platforms without a latency report (currently all
+    /// native backends) and before the stream is running. The value jitters by
+    /// roughly a render quantum between reads; smooth it before applying.
+    pub fn output_latency(&mut self) -> Option<f64> {
+        #[cfg(all(target_arch = "wasm32", feature = "web_audio"))]
+        {
+            self.with_store(|_, store| {
+                store
+                    .get_mut::<firewheel_web_audio::WebAudioBackend>()
+                    .and_then(|backend| backend.output_latency())
+            })
+        }
+        #[cfg(not(all(target_arch = "wasm32", feature = "web_audio")))]
+        {
+            None
+        }
+    }
+
     /// Operate on the underlying audio context.
     ///
     /// In multi-threaded contexts, this sends `f` to the underlying control thread,

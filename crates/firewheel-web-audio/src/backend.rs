@@ -44,6 +44,64 @@ impl WebAudioBackend {
     pub fn sample_rate(&self) -> NonZeroU32 {
         NonZeroU32::new(self.web_context.sample_rate() as u32).unwrap()
     }
+
+    /// The [`AudioContext.getOutputTimestamp`] pair: the context time of the
+    /// sample frame the output device is playing right now, and the
+    /// `performance.now()` time (in milliseconds) at which that was true.
+    ///
+    /// Returns `None` before playback has started (the timestamp reads zero)
+    /// or if the browser doesn't implement the method.
+    ///
+    /// [`AudioContext.getOutputTimestamp`]: https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/getOutputTimestamp
+    pub fn output_timestamp(&self) -> Option<OutputTimestamp> {
+        // `web-sys` doesn't bind `getOutputTimestamp` (or the `AudioTimestamp`
+        // dictionary), so go through `Reflect`; a missing method degrades to
+        // `None` instead of throwing.
+        let context: &JsValue = self.web_context.as_ref();
+        let method = js_sys::Reflect::get(context, &"getOutputTimestamp".into()).ok()?;
+        let method: js_sys::Function = method.dyn_into().ok()?;
+        let timestamp = method.call0(context).ok()?;
+        let context_time = js_sys::Reflect::get(&timestamp, &"contextTime".into())
+            .ok()?
+            .as_f64()?;
+        let performance_time_ms = js_sys::Reflect::get(&timestamp, &"performanceTime".into())
+            .ok()?
+            .as_f64()?;
+        (context_time > 0.0).then_some(OutputTimestamp {
+            context_time,
+            performance_time_ms,
+        })
+    }
+
+    /// The total output pipeline latency in seconds: how long a sample written
+    /// at the context's current time takes to reach the ear. Derived from
+    /// [`Self::output_timestamp`] as the write-head/play-head gap corrected
+    /// for the snapshot's age, it includes the processing graph's base
+    /// latency, the device's output latency (Bluetooth routing shows up
+    /// here), and any user-agent buffering in between — and it tracks output
+    /// device changes at runtime.
+    ///
+    /// Unlike `AudioContext.outputLatency`, the underlying API is implemented
+    /// by every major browser, including Safari.
+    pub fn output_latency(&self) -> Option<f64> {
+        let timestamp = self.output_timestamp()?;
+        let now_ms = web_sys::window()?.performance()?.now();
+        let staleness = (now_ms - timestamp.performance_time_ms) / 1000.0;
+        let latency = (self.web_context.current_time() - timestamp.context_time) - staleness;
+        (latency.is_finite() && latency > 0.0).then_some(latency)
+    }
+}
+
+/// A snapshot relating the audio output position to the main thread's clock.
+/// See [`WebAudioBackend::output_timestamp`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OutputTimestamp {
+    /// Position of the sample frame currently being played by the output
+    /// device, in `AudioContext.currentTime` coordinates (seconds).
+    pub context_time: f64,
+    /// The `performance.now()` reading (milliseconds) paired with
+    /// [`Self::context_time`].
+    pub performance_time_ms: f64,
 }
 
 impl Drop for WebAudioBackend {
