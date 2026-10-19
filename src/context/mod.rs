@@ -89,13 +89,15 @@ impl AudioContext {
     ///
     /// On the web this is derived from `AudioContext.getOutputTimestamp` (all
     /// major browsers), so it tracks output device changes at runtime — a
-    /// Bluetooth headset connecting mid-session shows up here. Use it to lead
-    /// gameplay-triggered sounds so their transients land in sync with the
+    /// Bluetooth headset connecting mid-session shows up here. On native it is
+    /// the backend's process-to-playback delay for the latest block (CPAL's
+    /// callback and playback timestamps, RtAudio's stream latency). Use it to
+    /// lead gameplay-triggered sounds so their transients land in sync with the
     /// presented frame.
     ///
-    /// Returns `None` on platforms without a latency report (currently all
-    /// native backends) and before the stream is running. The value jitters by
-    /// roughly a render quantum between reads; smooth it before applying.
+    /// Returns `None` where the backend reports no latency and before the
+    /// stream is running. The value jitters by roughly a render quantum between
+    /// reads; smooth it before applying.
     pub fn output_latency(&mut self) -> Option<f64> {
         #[cfg(all(target_arch = "wasm32", feature = "web_audio"))]
         {
@@ -107,7 +109,11 @@ impl AudioContext {
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "web_audio")))]
         {
-            None
+            self.with(|context| {
+                context
+                    .process_to_playback_delay()
+                    .map(|delay| delay.as_secs_f64())
+            })
         }
     }
 
