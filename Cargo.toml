@@ -148,14 +148,14 @@ required-features = ["profiling"]
 [package.metadata.docs.rs]
 all-features = true
 
-# --- local firewheel fork (Bevy 0.20); swap for git URLs when publishing ---
+# --- firewheel fork (Bevy 0.20) ---
 [patch.crates-io]
-firewheel = { path = "../firewheel" }
-firewheel-core = { path = "../firewheel/crates/firewheel-core" }
-firewheel-graph = { path = "../firewheel/crates/firewheel-graph" }
-firewheel-nodes = { path = "../firewheel/crates/firewheel-nodes" }
-firewheel-cpal = { path = "../firewheel/crates/firewheel-cpal" }
-firewheel-rtaudio = { path = "../firewheel/crates/firewheel-rtaudio" }
-firewheel-symphonium = { path = "../firewheel/crates/firewheel-symphonium" }
-firewheel-macros = { path = "../firewheel/crates/firewheel-macros" }
-# --- end local firewheel fork ---
+firewheel = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-core = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-graph = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-nodes = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-cpal = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-rtaudio = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-symphonium = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+firewheel-macros = { git = "https://github.com/tysen/Firewheel", branch = "0.12-bevy-0.20" }
+# --- end firewheel fork ---
